@@ -1,0 +1,51 @@
+# python
+
+# _pycache_/
+# .py[cod]
+# .pyc
+# .pyo
+# .pyd
+
+
+# virtual 
+
+# venv/
+# env/
+# .venv/
+
+
+# django
+# .log
+# local_settings.py
+
+# SQLite Database
+# db.sqlite3
+
+# enviroment varibles/secerts
+.env
+.env.*
+!.env.example
+
+# MEDIA / USER UPLOADS
+# media/
+
+# STATIC
+# staticfiles/
+
+# IDE SETTINGS
+# .vscode/
+# .idea/
+
+# OPERATING SYSTEM
+# .DS_Store
+# Thumbs.db
+
+# Testing / coverage
+# .coverage
+# html/cov/
+# .pytest_cache/
+# .mypy_Cache/
+
+# BACKUPS
+# .back
+# .backup

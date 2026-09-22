@@ -1,0 +1,151 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Pay Together{% endblock %} · Pay Together</title>
+    <meta name="description" content="Plan trips together and split shared expenses fairly, in one place.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                        display: ['Poppins', 'ui-sans-serif', 'system-ui'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef5ff', 100: '#dcebff', 200: '#b3d4ff', 300: '#80b8ff',
+                            400: '#4d94ff', 500: '#2670f5', 600: '#1553d1', 700: '#123fa3',
+                            800: '#123581', 900: '#122e64',
+                        },
+                        mint: {
+                            400: '#34d399', 500: '#10b981', 600: '#059669',
+                        },
+                        credit: {
+                            50: '#ecfdf5', 500: '#10b981', 600: '#059669',
+                        },
+                        debit: {
+                            50: '#fef2f2', 500: '#ef4444', 600: '#dc2626',
+                        },
+                    },
+                    boxShadow: {
+                        soft: '0 10px 30px -12px rgba(18, 53, 129, 0.18)',
+                    },
+                },
+            },
+        };
+    </script>
+
+    <style>
+        body { font-family: 'Inter', ui-sans-serif, system-ui; }
+        .font-display { font-family: 'Poppins', ui-sans-serif, system-ui; }
+        [x-cloak] { display: none !important; }
+    </style>
+
+    {% block css %}{% endblock %}
+</head>
+<body class="min-h-screen bg-[#f6f8fb] text-slate-900 antialiased">
+
+{% block navbar %}
+<header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 shadow-[0_1px_0_rgba(15,23,42,0.03)] backdrop-blur">
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+
+        <a href="{% url 'accounts:home' %}" class="flex items-center gap-2.5">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-mint-500 text-base font-bold text-white shadow-soft">P</span>
+            <span class="font-display text-lg font-bold tracking-tight text-slate-900">Pay<span class="text-brand-600">Together</span></span>
+        </a>
+
+        <nav id="primaryNav" class="hidden items-center gap-1 md:flex" aria-label="Primary">
+            <a href="{% url 'accounts:home' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">Home</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'accounts:dashboard' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">Dashboard</a>
+                <a href="{% url 'tours:tour-list-page' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">My Tours</a>
+                <a href="{% url 'tours_page:join-tour' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">Join Tour</a>
+            {% endif %}
+        </nav>
+
+        <div id="authNav" class="flex items-center gap-2">
+            {% if user.is_authenticated %}
+                <span class="hidden max-w-28 truncate rounded-full bg-slate-100 px-3.5 py-1.5 text-sm font-semibold text-slate-700 sm:inline" title="{{ user.get_full_name|default:user.username|default:user.email }}">
+                    {{ user.first_name|default:user.username|default:user.email }}
+                </span>
+                <form method="post" action="{% url 'accounts:logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600">
+                        Logout
+                    </button>
+                </form>
+            {% else %}
+                <a href="{% url 'accounts:login' %}" class="rounded-lg px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Login</a>
+                <a href="{% url 'accounts:register-page' %}" class="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700">Get started</a>
+            {% endif %}
+
+            <button type="button" onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="rounded-lg border border-slate-200 p-2 text-slate-600 md:hidden" aria-label="Toggle navigation">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 5h14a1 1 0 100-2H3a1 1 0 000 2zm0 6h14a1 1 0 100-2H3a1 1 0 000 2zm0 6h14a1 1 0 100-2H3a1 1 0 000 2z" clip-rule="evenodd"/></svg>
+            </button>
+        </div>
+        <div id="notificationWrapper" class="relative hidden"></div>
+    </div>
+
+    <div id="mobileMenu" class="hidden border-t border-slate-200 bg-white px-4 py-3 md:hidden">
+        <div id="mobileNav" class="flex flex-col gap-1">
+            <a href="{% url 'accounts:home' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Home</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'accounts:dashboard' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Dashboard</a>
+                <a href="{% url 'tours:tour-list-page' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">My Tours</a>
+                <a href="{% url 'tours_page:join-tour' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Join Tour</a>
+            {% else %}
+                <a href="{% url 'accounts:login' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Login</a>
+                <a href="{% url 'accounts:register-page' %}" class="rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+{% endblock %}
+
+{% if messages %}
+    <div class="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
+        {% for message in messages %}
+            <div class="mb-2 rounded-xl border px-4 py-3 text-sm font-medium
+                {% if message.tags == 'error' %} border-red-200 bg-red-50 text-red-700
+                {% elif message.tags == 'success' %} border-mint-200 bg-emerald-50 text-emerald-700
+                {% else %} border-brand-200 bg-brand-50 text-brand-700 {% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+{% block footer %}
+<footer class="mt-20 border-t border-slate-200 bg-white">
+    <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
+            <div class="flex items-center gap-2.5">
+                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-mint-500 text-sm font-bold text-white">P</span>
+                <span class="font-display text-base font-bold text-slate-900">PayTogether</span>
+            </div>
+            <p class="text-sm text-slate-500">&copy; 2026 PayTogether. Plan together, split fairly.</p>
+        </div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block js %}{% endblock %}
+{% block script %}{% endblock %}
+{% block scripts %}{% endblock %}
+<script src="{% static 'js/auth-nav.js' %}"></script>
+
+</body>
+</html>

@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Split trips fairly{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="relative overflow-hidden bg-gradient-to-b from-brand-50 via-white to-white">
+    <div class="absolute -top-24 right-[-10%] h-96 w-96 rounded-full bg-brand-200/40 blur-3xl"></div>
+    <div class="absolute -bottom-24 left-[-10%] h-96 w-96 rounded-full bg-mint-400/20 blur-3xl"></div>
+
+    <div class="relative mx-auto grid max-w-7xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8 lg:py-24">
+        <div>
+            {% if user.is_authenticated %}
+                <p class="mb-4 text-sm font-bold text-brand-700">Welcome back, {{ user.first_name|default:user.username }}.</p>
+            {% endif %}
+            <span class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-brand-700 shadow-sm">
+                Group travel, made simple
+            </span>
+            <h1 class="mt-6 font-display text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl">
+                Plan the trip.<br>
+                <span class="bg-gradient-to-r from-brand-600 to-mint-600 bg-clip-text text-transparent">Split the bill.</span> Together.
+            </h1>
+            <p class="mt-6 max-w-xl text-lg text-slate-600">
+                Create a tour, invite friends with a single join code, log every expense as it happens,
+                and let PayTogether work out exactly who owes who — down to the last rupee.
+            </p>
+            <div class="mt-8 flex flex-wrap gap-4">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'accounts:dashboard' %}" class="rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-bold text-white shadow-soft transition hover:bg-brand-700">Go to Dashboard</a>
+                    <a href="{% url 'tours:create-tour-page' %}" class="rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-bold text-slate-800 transition hover:bg-slate-50">+ Create a Tour</a>
+                {% else %}
+                    <a href="{% url 'accounts:register-page' %}" class="rounded-xl bg-brand-600 px-7 py-3.5 text-sm font-bold text-white shadow-soft transition hover:bg-brand-700">Create free account</a>
+                    <a href="{% url 'accounts:login' %}" class="rounded-xl border border-slate-300 bg-white px-7 py-3.5 text-sm font-bold text-slate-800 transition hover:bg-slate-50">I already have an account</a>
+                {% endif %}
+            </div>
+            <div class="mt-10 flex items-center gap-8 text-sm text-slate-500">
+                <div><span class="font-display block text-2xl font-extrabold text-slate-900">1 code</span>to invite the whole group</div>
+                <div><span class="font-display block text-2xl font-extrabold text-slate-900">0 spreadsheets</span>for splitting costs</div>
+            </div>
+        </div>
+
+        <div class="relative">
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-widest text-brand-600">Hunza Valley Trip</p>
+                        <p class="text-lg font-bold text-slate-900">Report summary</p>
+                    </div>
+                    <span class="rounded-full bg-mint-500/10 px-3 py-1 text-xs font-bold text-mint-600">Ongoing</span>
+                </div>
+                <div class="mt-5 space-y-3">
+                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                        <span class="text-sm font-semibold text-slate-700">Ali paid</span>
+                        <span class="font-bold text-slate-900">Rs 12,000</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                        <span class="text-sm font-semibold text-slate-700">Sara paid</span>
+                        <span class="font-bold text-slate-900">Rs 4,000</span>
+                    </div>
+                    <div class="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3">
+                        <span class="text-sm font-semibold text-emerald-700">Sara owes Ali</span>
+                        <span class="font-bold text-emerald-700">Rs 4,000</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-2xl text-center">
+        <p class="text-xs font-bold uppercase tracking-widest text-brand-600">Everything in one place</p>
+        <h2 class="mt-3 font-display text-3xl font-bold text-slate-950 sm:text-4xl">Built for group trips</h2>
+        <p class="mt-4 text-slate-600">From the first invite to the final settle-up, PayTogether keeps your whole group on the same page.</p>
+    </div>
+
+    <div class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-xl">🧭</div>
+            <h3 class="mt-5 font-display text-lg font-bold text-slate-900">Create a tour</h3>
+            <p class="mt-2 text-sm text-slate-600">Set the destination, dates and budget in seconds. Get a unique join code to share with your group.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-mint-500/10 text-xl">🔗</div>
+            <h3 class="mt-5 font-display text-lg font-bold text-slate-900">One code to join</h3>
+            <p class="mt-2 text-sm text-slate-600">No email chains or invite links to manage — friends just type in the code and they're in.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-xl">🧾</div>
+            <h3 class="mt-5 font-display text-lg font-bold text-slate-900">Log every expense</h3>
+            <p class="mt-2 text-sm text-slate-600">Track who paid what — hotel, food, travel — categorised and visible to the whole group.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-xl">⚖️</div>
+            <h3 class="mt-5 font-display text-lg font-bold text-slate-900">Fair, automatic split</h3>
+            <p class="mt-2 text-sm text-slate-600">We calculate each member's fair share and balance automatically — no manual maths.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100 text-xl">🤝</div>
+            <h3 class="mt-5 font-display text-lg font-bold text-slate-900">Know who to pay</h3>
+            <p class="mt-2 text-sm text-slate-600">A settle-up view shows the minimum set of payments needed to square everyone up.</p>
+        </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-soft">
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-xl">📊</div>
+            <h3 class="mt-5 font-display text-lg font-bold text-slate-900">Trip reports</h3>
+            <p class="mt-2 text-sm text-slate-600">See total spend, a category breakdown, and each member's balance at a glance.</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="mx-auto max-w-7xl px-4 pb-24 sm:px-6 lg:px-8">
+    <div class="overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand-600 to-mint-600 px-8 py-14 text-center shadow-soft sm:px-16">
+        <h2 class="font-display text-3xl font-bold text-white sm:text-4xl">Ready to plan your next trip?</h2>
+        <p class="mx-auto mt-4 max-w-xl text-brand-50">Create a tour, invite your friends, and never argue about who owes what again.</p>
+        <div class="mt-8 flex flex-wrap justify-center gap-4">
+            {% if user.is_authenticated %}
+                <a href="{% url 'tours:create-tour-page' %}" class="rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-brand-700 shadow-soft transition hover:bg-brand-50">+ Create a Tour</a>
+            {% else %}
+                <a href="{% url 'accounts:register-page' %}" class="rounded-xl bg-white px-7 py-3.5 text-sm font-bold text-brand-700 shadow-soft transition hover:bg-brand-50">Get started — it's free</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{% endblock %}

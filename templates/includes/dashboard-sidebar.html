@@ -1,0 +1,30 @@
+{% load static %}
+
+<aside id="dashboardSidebar" class="fixed inset-y-0 left-0 z-40 min-h-screen w-72 -translate-x-full bg-slate-950 text-white transition-transform lg:fixed lg:translate-x-0">
+    <div class="flex min-h-full flex-col">
+        <div class="flex h-16 items-center gap-2.5 border-b border-white/10 px-6">
+            <span class="grid h-8 w-8 place-items-center rounded-lg bg-brand-500 text-white">
+                <span aria-hidden="true">P</span>
+            </span>
+            <span class="font-display text-base font-extrabold tracking-tight">Pay Together</span>
+        </div>
+        <nav class="space-y-1 px-4 py-6" aria-label="Main navigation">
+            <a href="/dashboard/" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"><span aria-hidden="true">▣</span>Dashboard</a>
+            <a href="/tours/" class="flex items-center gap-3 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-950/30"><span aria-hidden="true">✈</span>Tours</a>
+            <a href="/tours/join/" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"><span aria-hidden="true">＋</span>Join a tour</a>
+            <a href="/dashboard/" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"><span aria-hidden="true">◎</span>Profile</a>
+        </nav>
+        <div class="mt-auto border-t border-white/10 p-4">
+            <button type="button" class="logout-btn flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white"><span aria-hidden="true">⏻</span>Log out</button>
+        </div>
+    </div>
+</aside>
+
+<div id="dashboardSidebarOverlay" class="fixed inset-0 z-30 hidden bg-slate-950/50 lg:hidden" onclick="toggleDashboardSidebar()"></div>
+
+<script>
+function toggleDashboardSidebar() {
+    document.getElementById("dashboardSidebar").classList.toggle("-translate-x-full");
+    document.getElementById("dashboardSidebarOverlay").classList.toggle("hidden");
+}
+</script>

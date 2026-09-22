@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Share Tour{% endblock %}
+{% block navbar %}{% endblock %}
+{% block footer %}{% endblock %}
+
+{% block content %}
+<main class="min-h-screen bg-gradient-to-b from-brand-50 via-slate-50 to-white px-4 py-6 sm:px-6 sm:py-10">
+    <div class="mx-auto w-full max-w-xl">
+        <a href="/tours/{{ tour_id }}/" class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-100">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M19 12H5m6-6-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Back to tour
+        </a>
+
+        <section class="mt-4 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_55px_-25px_rgba(21,83,209,0.28)] sm:mt-6">
+            <div class="bg-gradient-to-br from-slate-950 via-brand-900 to-brand-700 px-5 py-8 text-white sm:px-8 sm:py-10">
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-brand-100">Invite your group</p>
+                <h1 class="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">Share this tour</h1>
+                <p id="shareSubtitle" class="mt-3 text-sm leading-relaxed text-brand-100 sm:text-base">Loading your tour details…</p>
+            </div>
+
+            <div class="p-5 sm:p-8">
+                <div id="shareLoading" class="py-8 text-center text-sm font-medium text-slate-500">Preparing share options…</div>
+
+                <div id="shareContent" class="hidden">
+                    <div id="moreAppsPanel" class="fixed inset-0 z-50 hidden overflow-y-auto p-4 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="moreAppsTitle" aria-describedby="moreAppsDescription">
+                        <div id="moreAppsBackdrop" class="fixed inset-0 bg-slate-950/55 backdrop-blur-sm" aria-hidden="true"></div>
+                        <section class="relative mx-auto flex min-h-full w-full max-w-md items-center">
+                            <div class="max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-3xl border border-white/70 bg-white p-5 shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-6">
+                                <div class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <span class="grid h-11 w-11 place-items-center rounded-2xl bg-brand-100 text-brand-700" aria-hidden="true">
+                                            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 4 4m-4-4L8 8M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </span>
+                                        <h2 id="moreAppsTitle" class="mt-3 font-display text-xl font-extrabold text-slate-900">Share with another app</h2>
+                                        <p id="moreAppsDescription" class="mt-1 text-sm leading-relaxed text-slate-500">We'll copy your invite, then open the app you choose.</p>
+                                    </div>
+                                    <button id="closeMoreAppsBtn" type="button" class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-4 focus:ring-brand-100" aria-label="Close share apps">
+                                        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+                                    </button>
+                                </div>
+
+                                <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    <button type="button" data-share-app="Snapchat" data-target-url="https://www.snapchat.com/" class="shareAppBtn group flex min-h-16 items-center gap-4 rounded-2xl border border-yellow-300 bg-[#FFFC00] px-4 text-left font-bold text-slate-900 transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-200">
+                                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-white shadow-sm" aria-hidden="true"><svg class="h-7 w-7" viewBox="0 0 24 24" fill="#FFFC00" stroke="#111827" stroke-width="1.3" stroke-linejoin="round"><path d="M12 3.25c-2.5 0-4.4 1.85-4.4 4.32 0 .48-.2.9-.62 1.16-.6.37-.98 1.03-.98 1.76 0 .78.43 1.47 1.07 1.82-.04.14-.07.3-.07.45 0 .91.74 1.65 1.65 1.65.23 0 .45-.05.65-.13.3.7.99 1.18 1.8 1.18.44 0 .85-.14 1.18-.38.33.24.74.38 1.18.38.81 0 1.5-.48 1.8-1.18.2.08.42.13.65.13.91 0 1.65-.74 1.65-1.65 0-.15-.03-.31-.07-.45.64-.35 1.07-1.04 1.07-1.82 0-.73-.38-1.39-.98-1.76a1.4 1.4 0 0 1-.62-1.16c0-2.47-1.9-4.32-4.4-4.32Z"/></svg></span>
+                                        <span class="flex-1">Snapchat</span><span class="text-lg transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                                    </button>
+                                    <button type="button" data-share-app="imo" data-target-url="https://imo.im/" class="shareAppBtn group flex min-h-16 items-center gap-4 rounded-2xl bg-[#1677FF] px-4 text-left font-bold text-white transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-200">
+                                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-white text-sm font-extrabold text-[#1677FF] shadow-sm" aria-hidden="true">imo</span>
+                                        <span class="flex-1">imo</span><span class="text-lg transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                                    </button>
+                                    <button type="button" data-share-app="ChatGPT" data-target-url="https://chatgpt.com/" class="shareAppBtn group flex min-h-16 items-center gap-4 rounded-2xl bg-slate-900 px-4 text-left font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-slate-300">
+                                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-white text-xl font-black text-slate-900 shadow-sm" aria-hidden="true">✦</span>
+                                        <span class="flex-1">ChatGPT</span><span class="text-lg transition group-hover:translate-x-1" aria-hidden="true">→</span>
+                                    </button>
+                                    <button id="nativeShareBtn" type="button" class="flex min-h-16 items-center gap-4 rounded-2xl border border-brand-200 bg-brand-50 px-4 text-left font-bold text-brand-800 transition hover:-translate-y-0.5 hover:bg-brand-100 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-brand-100">
+                                        <span class="grid h-10 w-10 place-items-center rounded-xl bg-white shadow-sm" aria-hidden="true"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0 4 4m-4-4L8 8M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                        <span class="flex-1">Device share menu</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="rounded-2xl border border-brand-100 bg-brand-50 p-4 text-center sm:p-5">
+                        <p class="text-xs font-bold uppercase tracking-[0.18em] text-brand-700">Join code</p>
+                        <code id="shareJoinCode" class="mt-2 block break-all font-display text-2xl font-extrabold tracking-[0.22em] text-brand-800 sm:text-3xl">—</code>
+                    </div>
+
+                    <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        <a id="whatsappShare" target="_blank" rel="noopener noreferrer" aria-label="Share on WhatsApp" class="flex min-h-28 flex-col items-center justify-center rounded-2xl bg-[#25D366] p-3 text-center text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:brightness-95 focus:outline-none focus:ring-4 focus:ring-emerald-100">
+                            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12 2a10 10 0 0 0-8.52 15.24L2 22l4.93-1.42A10 10 0 1 0 12 2Zm0 18.18a8.16 8.16 0 0 1-4.15-1.13l-.3-.18-2.93.84.86-2.85-.2-.3A8.18 8.18 0 1 1 12 20.18Zm4.48-6.13c-.25-.13-1.47-.73-1.7-.81-.23-.08-.4-.13-.57.13-.17.25-.65.81-.8.98-.15.17-.3.19-.55.06a6.7 6.7 0 0 1-1.97-1.21 7.36 7.36 0 0 1-1.36-1.69c-.14-.25-.01-.39.11-.51.11-.11.25-.3.37-.44.12-.15.16-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.57-1.37-.78-1.88-.21-.5-.42-.43-.57-.44h-.49c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.6.13.17 1.77 2.7 4.28 3.79.6.26 1.06.42 1.43.54.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.23-.17-.48-.3Z"/>
+                            </svg>
+                            <span class="mt-2">WhatsApp</span>
+                        </a>
+                        <a id="telegramShare" target="_blank" rel="noopener noreferrer" aria-label="Share on Telegram" class="flex min-h-28 flex-col items-center justify-center rounded-2xl bg-[#229ED9] p-3 text-center text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:brightness-95 focus:outline-none focus:ring-4 focus:ring-sky-100">
+                            <svg class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M21.55 3.16a1.5 1.5 0 0 0-1.55-.25L2.88 9.48a1.5 1.5 0 0 0 .1 2.83l4.32 1.35 1.63 5.17a1.5 1.5 0 0 0 2.52.62l2.4-2.48 3.92 2.88a1.5 1.5 0 0 0 2.36-.9l2.1-14.3a1.5 1.5 0 0 0-.66-1.49ZM9.03 13.12l8.61-5.45-6.95 6.67-.27 2.75-.96-3.05-.03-.92-.4-.12Z"/>
+                            </svg>
+                            <span class="mt-2">Telegram</span>
+                        </a>
+                        <a id="emailShare" class="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-100">
+                            <span class="text-2xl" aria-hidden="true">✉</span>
+                            <span class="mt-2">Email</span>
+                        </a>
+                        <a id="smsShare" class="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-100">
+                            <span class="text-2xl" aria-hidden="true">▤</span>
+                            <span class="mt-2">Message</span>
+                        </a>
+                        <button id="moreAppsBtn" type="button" aria-expanded="false" aria-controls="moreAppsPanel" class="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-100">
+                            <span class="grid h-9 w-9 place-items-center rounded-xl bg-brand-100 text-brand-700" aria-hidden="true">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="3.5" width="6" height="6" rx="1.25" fill="currentColor"/><rect x="14.5" y="3.5" width="6" height="6" rx="1.25" fill="currentColor"/><rect x="3.5" y="14.5" width="6" height="6" rx="1.25" fill="currentColor"/><path d="M17.5 14.5v6m-3-3h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </span>
+                            <span class="mt-2">More apps</span>
+                        </button>
+                        <button id="copyShareBtn" type="button" class="flex min-h-28 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center text-sm font-bold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-100">
+                            <span class="text-2xl" aria-hidden="true">⧉</span>
+                            <span class="mt-2">Copy invite</span>
+                        </button>
+                    </div>
+
+                    <p id="shareMessage" class="mt-5 hidden rounded-xl px-4 py-3 text-center text-sm font-medium" role="status"></p>
+                </div>
+
+                <div id="shareError" class="hidden rounded-2xl border border-red-200 bg-red-50 p-5 text-center text-sm font-medium text-red-700"></div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{{ tour_id|json_script:"share-tour-id" }}
+<script src="{% static 'js/share-tour.js' %}"></script>
+{% endblock %}
