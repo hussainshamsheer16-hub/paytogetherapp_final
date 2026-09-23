@@ -298,6 +298,13 @@
         const primaryNav = document.getElementById("primaryNav");
         const mobileNav = document.getElementById("mobileNav");
 
+        document.querySelectorAll("[data-home-auth-actions]").forEach((actions) => {
+            actions.classList.toggle("hidden", !authenticated);
+        });
+        document.querySelectorAll("[data-home-guest-actions]").forEach((actions) => {
+            actions.classList.toggle("hidden", authenticated);
+        });
+
         if (authNav) {
             authNav.innerHTML = authenticated
                 ? `<div class="relative flex items-center gap-2">
