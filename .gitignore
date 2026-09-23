@@ -1,51 +1,40 @@
-# python
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
 
-# _pycache_/
-# .py[cod]
-# .pyc
-# .pyo
-# .pyd
+# Virtual environments
+.venv/
+venv/
+env/
 
+# Django and local databases
+*.log
+local_settings.py
+db.sqlite3
 
-# virtual 
-
-# venv/
-# env/
-# .venv/
-
-
-# django
-# .log
-# local_settings.py
-
-# SQLite Database
-# db.sqlite3
-
-# enviroment varibles/secerts
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 
-# MEDIA / USER UPLOADS
-# media/
+# User uploads and collected static files
+media/
+staticfiles/
 
-# STATIC
-# staticfiles/
+# IDE and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
-# IDE SETTINGS
-# .vscode/
-# .idea/
+# Testing and coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
 
-# OPERATING SYSTEM
-# .DS_Store
-# Thumbs.db
-
-# Testing / coverage
-# .coverage
-# html/cov/
-# .pytest_cache/
-# .mypy_Cache/
-
-# BACKUPS
-# .back
-# .backup
+# Backups
+*.bak
+*.backup

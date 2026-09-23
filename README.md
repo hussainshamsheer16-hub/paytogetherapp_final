@@ -3,9 +3,10 @@
 ## Deploy to Railway
 
 This repository is ready to deploy from GitHub using Railway's Railpack
-builder. `railway.json` installs dependencies, collects static files, runs
-migrations before each release, and starts Gunicorn on Railway's assigned
-`PORT`. It also exposes a lightweight `/health/` endpoint for Railway.
+builder. `.python-version` pins the deployment runtime to Python 3.13.
+`railway.json` installs dependencies, collects static files, runs migrations
+before each release, and starts Gunicorn on Railway's assigned `PORT`. It
+also exposes a lightweight `/health/` endpoint for Railway.
 
 1. Push this project to a private GitHub repository. Do not commit a real
    `.env` file.
@@ -22,7 +23,7 @@ migrations before each release, and starts Gunicorn on Railway's assigned
    DEBUG=false
    SECRET_KEY=<a-new-long-random-secret>
    STRIPE_SECRET_KEY=<your-stripe-secret-key>
-   STRIPE_PUBLISHABLE_KEY=<your-stripe-publishable-key>
+   STRIPE_PUBLIC_KEY=<your-stripe-publishable-key>
    STRIPE_WEBHOOK_SECRET=<your-stripe-webhook-signing-secret>
    STRIPE_CURRENCY=usd
    ```
@@ -34,6 +35,7 @@ migrations before each release, and starts Gunicorn on Railway's assigned
    ```env
    ALLOWED_HOSTS=your-domain.example
    CSRF_TRUSTED_ORIGINS=https://your-domain.example
+   CORS_ALLOWED_ORIGINS=https://your-frontend.example
    ```
 
 6. For persistent tour and profile image uploads, add a Railway Volume mounted
@@ -72,12 +74,12 @@ Create a `.env` file beside `manage.py` and add:
 
 ```env
 STRIPE_SECRET_KEY=sk_test_your_secret_key
-STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
+STRIPE_PUBLIC_KEY=pk_test_your_publishable_key
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_signing_secret
 STRIPE_CURRENCY=usd
 ```
 
-`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are server-only values. They are never sent to browser JavaScript. `STRIPE_PUBLISHABLE_KEY` is reserved for client-side Stripe integrations; this implementation uses Stripe-hosted Checkout and does not need to expose it.
+`STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are server-only values. They are never sent to browser JavaScript. `STRIPE_PUBLIC_KEY` (also accepted as `STRIPE_PUBLISHABLE_KEY`) is reserved for client-side Stripe integrations; this implementation uses Stripe-hosted Checkout and does not need to expose it.
 
 Use a Stripe-supported currency for your account. The settlement amount is calculated by Django from the database and converted to the currency's smallest unit before the Checkout Session is created.
 

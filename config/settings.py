@@ -51,9 +51,9 @@ SECRET_KEY = config("SECRET_KEY", default=_development_secret_key)
 # environment can explicitly override this with the DEBUG variable.
 DEBUG = env_bool("DEBUG", default=not IS_RAILWAY)
 
-# Railway production deployments must supply their own secret. The local
+# Every production deployment must supply its own secret. The local
 # fallback keeps `python manage.py runserver` working without a .env file.
-if IS_RAILWAY and not DEBUG and SECRET_KEY == _development_secret_key:
+if not DEBUG and SECRET_KEY == _development_secret_key:
     raise RuntimeError("Set the SECRET_KEY environment variable for production.")
 
 # Railway supplies RAILWAY_PUBLIC_DOMAIN when a public domain is generated.
@@ -83,7 +83,10 @@ if not DEBUG:
 AUTH_USER_MODEL = "accounts.User"
 
 STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
-STRIPE_PUBLISHABLE_KEY = config("STRIPE_PUBLISHABLE_KEY", default="")
+STRIPE_PUBLISHABLE_KEY = config(
+    "STRIPE_PUBLISHABLE_KEY",
+    default=config("STRIPE_PUBLIC_KEY", default=""),
+)
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
 STRIPE_CURRENCY = config("STRIPE_CURRENCY", default="usd").lower()
 
@@ -123,9 +126,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-]
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:3000")
 
 
 ROOT_URLCONF = 'config.urls'
@@ -163,9 +164,9 @@ if DATABASE_URL:
         )
     }
 else:
-    if IS_RAILWAY and not DEBUG:
+    if not DEBUG:
         raise RuntimeError(
-            "Set DATABASE_URL to the Railway PostgreSQL service before deploying."
+            "Set DATABASE_URL to the PostgreSQL service before deploying."
         )
     # Keeps the existing zero-setup SQLite workflow for local development.
     DATABASES = {
