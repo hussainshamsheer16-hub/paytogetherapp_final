@@ -29,6 +29,20 @@ class TourMemberSerializer(serializers.ModelSerializer):
 
 
 class TourSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+
+        request = self.context.get("request")
+        url = obj.image.url
+
+        if request is not None:
+            return request.build_absolute_uri(url)
+
+        return url
+
     class Meta:
         model = Tour
         fields ="__all__"
@@ -39,6 +53,7 @@ class TourSerializer(serializers.ModelSerializer):
             "join_code",
             "created_at",
             "updated_at",
+            "image_url",
         ]
 
 
