@@ -242,7 +242,7 @@ MEDIA_URL = "/media/"
 # A Railway Volume can be mounted at /data and MEDIA_ROOT=/data/media set in
 # the service variables. Without a volume, user uploads are ephemeral.
 MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(BASE_DIR / "media")))
-SERVE_MEDIA = env_bool("SERVE_MEDIA", default=DEBUG)
+SERVE_MEDIA = env_bool("SERVE_MEDIA", default=True)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

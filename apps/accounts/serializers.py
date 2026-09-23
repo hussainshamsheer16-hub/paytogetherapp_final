@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User
 from django.contrib.auth import authenticate
+from django.core.files.storage import default_storage
 
 
 
@@ -126,9 +127,22 @@ class loginSerializer(serializers.Serializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
+    profile_image_url = serializers.SerializerMethodField()
 
     def get_full_name(self, user):
         return user.get_full_name().strip()
+
+    def get_profile_image_url(self, user):
+        if not user.profile_image:
+            return None
+
+        request = self.context.get("request")
+        url = default_storage.url(user.profile_image.name)
+
+        if request is not None:
+            return request.build_absolute_uri(url)
+
+        return url
 
     class Meta:
         model = User
@@ -139,6 +153,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             "full_name",
             "phone_number",
             "profile_image",
+            "profile_image_url",
             "date_joined",
             "last_login",
+        ]
+        read_only_fields = [
+            "profile_image_url",
         ]
