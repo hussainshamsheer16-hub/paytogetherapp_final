@@ -240,9 +240,11 @@ STORAGES = {
 
 MEDIA_URL = "/media/"
 # A Railway Volume can be mounted at /data and MEDIA_ROOT=/data/media set in
-# the service variables. Without a volume, user uploads are ephemeral.
+# the service variables. Without a volume, user uploads are ephemeral. Serve
+# media by default on Railway so ImageField URLs work after deployment; keep
+# this configurable for deployments that use external object storage/CDN.
 MEDIA_ROOT = Path(config("MEDIA_ROOT", default=str(BASE_DIR / "media")))
-SERVE_MEDIA = env_bool("SERVE_MEDIA", default=DEBUG)
+SERVE_MEDIA = env_bool("SERVE_MEDIA", default=DEBUG or IS_RAILWAY)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
