@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from decouple import config
@@ -53,7 +54,10 @@ DEBUG = env_bool("DEBUG", default=not IS_RAILWAY)
 
 # Every production deployment must supply its own secret. The local
 # fallback keeps `python manage.py runserver` working without a .env file.
-if not DEBUG and SECRET_KEY == _development_secret_key:
+# collectstatic runs during build, before runtime env vars are injected,
+# so skip validation for that specific command.
+_is_collectstatic = "collectstatic" in sys.argv
+if not DEBUG and not _is_collectstatic and SECRET_KEY == _development_secret_key:
     raise RuntimeError("Set the SECRET_KEY environment variable for production.")
 
 # Railway supplies RAILWAY_PUBLIC_DOMAIN when a public domain is generated.
