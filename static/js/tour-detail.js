@@ -1,8 +1,11 @@
 let tourId = null;
+let selectedSettlementPaymentMethod = null;
 
 let currentTour = null;
 let currentUserId = null;
 let tourMembers = [];
+let currentTourReport = null;
+let paymentLinkOpened = false;
 
 document.addEventListener(
     "DOMContentLoaded",
@@ -860,6 +863,10 @@ async function loadCurrentUser() {
             accountButton.title = data.full_name || data.username || data.email || "Account";
         }
         renderExpenseActions();
+        if (currentTourReport) {
+            renderReport(currentTourReport);
+            maybeOpenPaymentLink();
+        }
     } catch (error) {
         console.error("Error loading current user:", error);
     }
@@ -1185,7 +1192,9 @@ async function loadReport() {
         if (!response.ok) return;
 
         const report = await response.json();
+        currentTourReport = report;
         renderReport(report);
+        maybeOpenPaymentLink();
     } catch (error) {
         console.error("Error loading report:", error);
     }
@@ -1224,11 +1233,11 @@ function renderReport(report) {
 
     settlementsList.innerHTML = report.settlements.map((settlement) => {
         const isPaid = settlement.status === "paid" || settlement.status === "received";
-        const isPending = settlement.status === "pending";
+        const isPending = settlement.status === "pending" || settlement.status === "processing";
         const isNotReceived = settlement.status === "not_received";
         const canPay = !isPaid && !isPending && Number(settlement.from_id) === Number(currentUserId);
-        const canApprove = isPending && Number(settlement.to_id) === Number(currentUserId);
-        const statusLabel = isPaid ? "Paid" : (isNotReceived ? "Unpaid" : (isPending ? "Awaiting confirmation" : "Unpaid"));
+        const canApprove = ["cod", "raast"].includes(settlement.payment_method) && settlement.status === "pending" && Number(settlement.to_id) === Number(currentUserId);
+        const statusLabel = isPaid ? "Paid" : (settlement.status === "processing" ? "Processing" : (isNotReceived ? "Unpaid" : (isPending ? "Awaiting confirmation" : "Unpaid")));
         const statusClass = isPaid
             ? "bg-green-100 text-green-700"
             : (isNotReceived ? "bg-red-100 text-red-700" : (isPending ? "bg-sky-100 text-sky-700" : "bg-amber-100 text-amber-700"));
@@ -1238,12 +1247,12 @@ function renderReport(report) {
                     <span class="font-semibold text-gray-900">${escapeHtml(settlement.from)}</span>
                     pays
                     <span class="font-semibold text-gray-900">${escapeHtml(settlement.to)}</span>
-                    ${canApprove ? `<span class="mt-1 block text-xs font-semibold text-sky-700">A payment was sent. Please confirm whether it was received.</span>` : ""}
+                    ${canApprove ? `<span class="mt-1 block text-xs font-semibold text-sky-700">${settlement.payment_method === "raast" ? "The payer reported a Raast transfer. Check your bank account before confirming." : "A payment was sent. Please confirm whether it was received."}</span>` : ""}
                 </p>
                 <div class="flex items-center gap-3">
                     <p class="text-sm font-bold text-brand-700">Rs ${formatAmountValue(settlement.amount)}</p>
                     <span class="rounded-full px-2.5 py-1 text-xs font-bold ${statusClass}">${statusLabel}</span>
-                    ${canPay && !isPending ? `<button type="button" class="pay-settlement-btn rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700" data-to-id="${settlement.to_id}" data-amount="${settlement.amount}">Pay</button>` : ""}
+                    ${canPay && !isPending ? `<button type="button" class="pay-settlement-btn rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-700" data-to-id="${settlement.to_id}" data-to-name="${escapeHtml(settlement.to)}" data-amount="${settlement.amount}">Pay</button>` : ""}
                     ${canApprove ? `
                         <div class="flex items-center gap-2">
                             <button type="button" class="approve-settlement-btn rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700" data-payment-id="${settlement.payment_id}" data-decision="received">Received</button>
@@ -1265,41 +1274,105 @@ function renderReport(report) {
 
 function setupSettlementPaymentModal() {
     document.getElementById("closeSettlementPaymentModalBtn").addEventListener("click", closeSettlementPaymentModal);
-    document.getElementById("cancelSettlementPaymentBtn").addEventListener("click", closeSettlementPaymentModal);
     document.getElementById("settlementPaymentOverlay").addEventListener("click", closeSettlementPaymentModal);
-    document.getElementById("settlementPaymentForm").addEventListener("submit", submitSettlementPayment);
-    document.getElementById("settlementPaymentMethod").addEventListener("change", updateSettlementPaymentMethod);
+    document.querySelectorAll(".payment-method-choice").forEach((button) => {
+        button.addEventListener("click", () => chooseSettlementPaymentMethod(button.dataset.paymentMethod));
+    });
+    document.getElementById("backToPaymentMethodsBtn").addEventListener("click", () => {
+        document.getElementById("paymentMethodStep").classList.add("hidden");
+        document.getElementById("paymentMethodChoices").classList.remove("hidden");
+    });
+    document.getElementById("continuePaymentMethodBtn").addEventListener("click", continueSettlementPayment);
 }
 
 function openSettlementPaymentModal(data) {
     document.getElementById("settlementPaymentToId").value = data.toId;
     document.getElementById("settlementPaymentAmount").value = data.amount;
     document.getElementById("settlementPaymentAmountLabel").textContent = `Rs ${formatAmountValue(data.amount)}`;
-    document.getElementById("settlementPaymentMethod").value = "cod";
-    updateSettlementPaymentMethod();
+    document.getElementById("settlementRecipientName").textContent = data.toName || "";
+    document.getElementById("settlementRecipientId").textContent = data.toId || "";
+    selectedSettlementPaymentMethod = null;
+    document.getElementById("paymentMethodStep").classList.add("hidden");
+    document.getElementById("paymentMethodChoices").classList.remove("hidden");
+    document.getElementById("paymentMethodStepError").classList.add("hidden");
+    document.getElementById("raastIdFields").classList.add("hidden");
+    document.getElementById("raastQrPanel").classList.add("hidden");
+    document.getElementById("senderRaastId").value = "";
+    document.getElementById("recipientRaastId").value = "";
     document.getElementById("settlementPaymentModal").classList.remove("hidden");
 }
 
-function updateSettlementPaymentMethod() {
-    const isCard = document.getElementById("settlementPaymentMethod").value === "card";
-    document.getElementById("settlementPaymentMethodHint").textContent = isCard
-        ? "You will continue to Stripe's secure checkout page to enter card details and confirm payment."
-        : "The recipient will approve this cash payment.";
-    document.getElementById("confirmSettlementPaymentBtn").textContent = isCard
-        ? "Continue to secure card payment"
-        : "Confirm cash payment";
+function chooseSettlementPaymentMethod(method) {
+    selectedSettlementPaymentMethod = method;
+    const copy = {
+        cod: ["Cash payment", "Send a cash payment request to the recipient. They can confirm after receiving the money.", "Send cash request"],
+        raast: ["Pay with Raast", "After sending the transfer in your bank app, enter both Raast IDs. The receiver must check their account and approve it; entering IDs does not verify a transfer.", "Submit for receiver approval"],
+        card: ["Pay by card", "Stripe Checkout securely collects your card details. The settlement is updated after Stripe confirms payment.", "Continue to Stripe"],
+    }[method];
+    document.getElementById("paymentMethodStepTitle").textContent = copy[0];
+    document.getElementById("paymentMethodStepText").textContent = copy[1];
+    document.getElementById("continuePaymentMethodBtn").textContent = copy[2];
+    document.getElementById("raastIdFields").classList.toggle("hidden", method !== "raast");
+    document.getElementById("raastQrPanel").classList.toggle("hidden", method !== "raast");
+    document.getElementById("paymentMethodStepError").classList.add("hidden");
+    document.getElementById("paymentMethodChoices").classList.add("hidden");
+    document.getElementById("paymentMethodStep").classList.remove("hidden");
+    if (method === "raast") generateRaastPaymentQr();
+}
+
+async function generateRaastPaymentQr() {
+    try {
+        const response = await fetchWithAuthRefresh("/api/payments/raast/payment-link/", {
+            method: "POST",
+            headers: authHeaders({ "Content-Type": "application/json" }),
+            body: JSON.stringify({
+                tour_id: Number(tourId),
+                to_id: Number(document.getElementById("settlementPaymentToId").value),
+            }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            showPaymentMethodError(data.message || "Unable to create a PayTogether payment link.");
+            return;
+        }
+        document.getElementById("raastPaymentQr").src = data.qr_code;
+        document.getElementById("raastPaymentLinkText").textContent = data.payment_url;
+    } catch (error) {
+        showPaymentMethodError("Unable to create a PayTogether payment link right now.");
+    }
+}
+
+function maybeOpenPaymentLink() {
+    if (paymentLinkOpened || !currentTourReport || !currentUserId) return;
+    const params = new URLSearchParams(window.location.search);
+    const payTo = Number(params.get("pay_to"));
+    if (!payTo) return;
+    paymentLinkOpened = true;
+    const settlement = currentTourReport.settlements.find((item) =>
+        Number(item.from_id) === Number(currentUserId) && Number(item.to_id) === payTo
+    );
+    if (!settlement || ["paid", "pending", "processing"].includes(settlement.status)) {
+        showMessage("This link has no payable settlement for your account.", "error");
+        return;
+    }
+    openSettlementPaymentModal({
+        toId: settlement.to_id,
+        toName: settlement.to,
+        amount: settlement.amount,
+    });
+    chooseSettlementPaymentMethod("raast");
 }
 
 function closeSettlementPaymentModal() {
     document.getElementById("settlementPaymentModal").classList.add("hidden");
 }
 
-async function submitSettlementPayment(event) {
-    event.preventDefault();
-    const button = document.getElementById("confirmSettlementPaymentBtn");
-    const paymentMethod = document.getElementById("settlementPaymentMethod").value;
+async function continueSettlementPayment() {
+    const button = document.getElementById("continuePaymentMethodBtn");
+    const paymentMethod = selectedSettlementPaymentMethod;
+    if (!paymentMethod) return;
     button.disabled = true;
-    button.textContent = paymentMethod === "card" ? "Creating secure checkout..." : "Processing...";
+    button.textContent = paymentMethod === "card" ? "Opening Stripe..." : paymentMethod === "raast" ? "Connecting to Raast..." : "Sending request...";
 
     try {
         if (paymentMethod === "card") {
@@ -1318,6 +1391,30 @@ async function submitSettlementPayment(event) {
             window.location.href = stripeData.checkout_url;
             return;
         }
+        if (paymentMethod === "raast") {
+            const senderRaastId = document.getElementById("senderRaastId").value.trim();
+            const recipientRaastId = document.getElementById("recipientRaastId").value.trim();
+            if (!senderRaastId || !recipientRaastId) {
+                showPaymentMethodError("Enter both Raast IDs to continue.");
+                return;
+            }
+            const response = await fetchWithAuthRefresh("/api/payments/raast/manual/", {
+                method: "POST",
+                headers: authHeaders({ "Content-Type": "application/json" }),
+                body: JSON.stringify({
+                    tour_id: Number(tourId),
+                    to_id: Number(document.getElementById("settlementPaymentToId").value),
+                    sender_raast_id: senderRaastId,
+                    recipient_raast_id: recipientRaastId,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || "Unable to submit the Raast transfer for review.");
+            closeSettlementPaymentModal();
+            showMessage("Raast transfer submitted. Waiting for the receiver to verify and approve it.", "success");
+            loadReport();
+            return;
+        }
 
         const response = await fetch(`/api/tours/${tourId}/settlements/pay/`, {
             method: "POST",
@@ -1334,15 +1431,41 @@ async function submitSettlementPayment(event) {
             showMessage("Payment request sent. Waiting for recipient approval.", "success");
             loadReport();
         } else {
-            showMessage(data.detail || "Unable to process payment.", "error");
+            showPaymentMethodError(data.detail || "Unable to process payment.");
         }
     } catch (error) {
         console.error("Error processing settlement payment:", error);
-        showMessage(error.message || "Unable to connect to the server.", "error");
+        showPaymentMethodError(error.message || "Unable to connect to the server.");
     } finally {
         button.disabled = false;
-        button.textContent = "Confirm payment";
+        const labels = { cod: "Send cash request", raast: "Continue with Raast", card: "Continue to Stripe" };
+        button.textContent = selectedSettlementPaymentMethod === "raast" ? "Submit for receiver approval" : (labels[selectedSettlementPaymentMethod] || "Continue");
     }
+}
+
+function showPaymentMethodError(message) {
+    const error = document.getElementById("paymentMethodStepError");
+    error.textContent = message;
+    error.classList.remove("hidden");
+}
+
+async function pollRaastPayment(paymentId, attempt = 0) {
+    if (!paymentId || attempt >= 12) return;
+    try {
+        const response = await fetchWithAuthRefresh(`/api/payments/status/?payment_id=${encodeURIComponent(paymentId)}`, {
+            headers: authHeaders(),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (response.ok && ["paid", "failed", "cancelled", "expired"].includes(result.status)) {
+            loadReport();
+            const labels = { paid: "Payment successful.", failed: "Payment failed.", cancelled: "Payment cancelled.", expired: "Payment expired." };
+            showMessage(labels[result.status], result.status === "paid" ? "success" : "error");
+            return;
+        }
+    } catch (error) {
+        // Status checks can fail temporarily; the recorded payment remains pending.
+    }
+    window.setTimeout(() => pollRaastPayment(paymentId, attempt + 1), 5000);
 }
 
 async function approveSettlementPayment(button) {

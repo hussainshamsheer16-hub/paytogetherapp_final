@@ -9,3 +9,4 @@ Pillow>=10.2,<13.0
 whitenoise>=6.9,<7.0
 gunicorn>=23.0,<24.0
 stripe>=11.0,<14.0
+qrcode>=8.2,<9.0

@@ -1,5 +1,8 @@
 from decimal import Decimal, InvalidOperation
+import base64
 
+import qrcode
+from qrcode.image.svg import SvgPathFillImage
 import stripe
 from django.conf import settings
 from django.db import transaction
@@ -13,9 +16,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.reports.models import SettlementPayment
+from apps.reports.models import Notification, SettlementPayment
 from apps.reports.views import _quantize, build_tour_report
 from apps.tour.models import Tour
+from .providers import ProviderUnavailable, UnconfiguredRaastProvider, get_raast_provider
+from .services import initiate_raast_payment, refresh_raast_payment
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -230,6 +235,15 @@ class PaymentStatusAPIView(APIView):
                 {"success": False, "message": "Payment was not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        if payment.payment_method == "raast" and payment.status in {"pending", "processing"}:
+            try:
+                payment = refresh_raast_payment(payment)
+            except ProviderUnavailable:
+                pass
+            except (TimeoutError, ConnectionError):
+                pass
+            except ValueError:
+                pass
         return Response(
             {
                 "success": True,
@@ -237,9 +251,174 @@ class PaymentStatusAPIView(APIView):
                 "amount": str(payment.amount),
                 "currency": payment.currency,
                 "transaction_reference": payment.transaction_reference,
-                "stripe_payment_intent_id": payment.stripe_payment_intent_id,
+                "provider_reference": payment.provider_reference if payment.payment_method == "raast" else "",
             }
         )
+
+
+class RaastPaymentAPIView(APIView):
+    """Start or resume Raast via an explicitly configured bank/PSP adapter."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            tour_id = int(request.data["tour_id"])
+            recipient_id = int(request.data["to_id"])
+        except (KeyError, TypeError, ValueError):
+            return Response({"message": "A valid tour and recipient are required."}, status=400)
+        tour = Tour.objects.filter(pk=tour_id).first()
+        if not tour or not (tour.created_by_id == request.user.id or tour.members.filter(user_id=request.user.id).exists()):
+            return Response({"message": "You cannot pay this settlement."}, status=404)
+        settlement = _current_settlement(tour, request.user.id, recipient_id)
+        if not settlement:
+            return Response({"message": "This is not a current settlement."}, status=400)
+        amount = _quantize(settlement["amount"])
+        if amount <= 0:
+            return Response({"message": "The payment amount is invalid."}, status=400)
+        provider = get_raast_provider()
+        if isinstance(provider, UnconfiguredRaastProvider):
+            return Response({"message": "Raast is not configured. Connect a participating bank or PSP adapter."}, status=503)
+        with transaction.atomic():
+            payment = SettlementPayment.objects.select_for_update().filter(
+                tour=tour, payer=request.user, recipient_id=recipient_id, amount=amount
+            ).first()
+            if payment and payment.status in {"paid", "pending"} and payment.payment_method != "raast":
+                return Response({"message": "Another payment is already awaiting confirmation."}, status=409)
+            if payment and payment.status == "paid":
+                return Response({"message": "This settlement is already paid."}, status=409)
+            if not payment:
+                payment = SettlementPayment.objects.create(
+                    tour=tour, payer=request.user, recipient_id=recipient_id,
+                    amount=amount, payment_method="raast", status="pending", currency="pkr",
+                )
+            elif payment.status in {"failed", "cancelled", "expired", "not_received"}:
+                payment.payment_method = "raast"
+                payment.status = "pending"
+                payment.paid_at = None
+                payment.provider_reference = ""
+                payment.save(update_fields=["payment_method", "status", "paid_at", "provider_reference", "updated_at"])
+            elif payment.payment_method != "raast":
+                payment.payment_method = "raast"
+                payment.status = "pending"
+                payment.save(update_fields=["payment_method", "status", "updated_at"])
+            elif payment.status == "processing" and payment.provider_reference:
+                return Response({"success": True, "status": payment.status, "payment_id": payment.id}, status=200)
+            try:
+                result = initiate_raast_payment(payment, provider=provider)
+            except ProviderUnavailable:
+                return Response({"message": "Raast is not configured. Connect a participating bank or PSP adapter."}, status=503)
+            except (TimeoutError, ConnectionError):
+                return Response({"message": "The payment provider did not respond. Check payment status before retrying."}, status=502)
+        payload = {"success": True, "status": payment.status, "payment_id": payment.id}
+        if result.redirect_url:
+            payload["redirect_url"] = result.redirect_url
+        if result.instructions:
+            payload["instructions"] = result.instructions
+        return Response(payload, status=200)
+
+
+class RaastManualPaymentAPIView(APIView):
+    """Record a payer-reported transfer for recipient review; this is not bank verification."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            tour_id = int(request.data["tour_id"])
+            recipient_id = int(request.data["to_id"])
+        except (KeyError, TypeError, ValueError):
+            return Response({"message": "A valid tour and recipient are required."}, status=400)
+
+        sender_raast_id = str(request.data.get("sender_raast_id", "")).strip()
+        recipient_raast_id = str(request.data.get("recipient_raast_id", "")).strip()
+        if not sender_raast_id or not recipient_raast_id:
+            return Response({"message": "Enter both sender and receiver Raast IDs."}, status=400)
+        if len(sender_raast_id) > 255 or len(recipient_raast_id) > 255:
+            return Response({"message": "Raast IDs must be 255 characters or fewer."}, status=400)
+
+        tour = Tour.objects.filter(pk=tour_id).first()
+        if not tour or not (tour.created_by_id == request.user.id or tour.members.filter(user_id=request.user.id).exists()):
+            return Response({"message": "You cannot pay this settlement."}, status=404)
+        settlement = _current_settlement(tour, request.user.id, recipient_id)
+        if not settlement:
+            return Response({"message": "This is not a current settlement."}, status=400)
+
+        amount = _quantize(settlement["amount"])
+        sender_name = request.user.get_full_name().strip() or request.user.username or request.user.email
+        with transaction.atomic():
+            payment = SettlementPayment.objects.select_for_update().filter(
+                tour=tour, payer=request.user, recipient_id=recipient_id, amount=amount
+            ).first()
+            if payment and payment.status == "paid":
+                return Response({"message": "This settlement is already paid."}, status=409)
+            if payment and payment.status == "pending":
+                if payment.payment_method == "raast" and payment.sender_raast_id == sender_raast_id and payment.recipient_raast_id == recipient_raast_id:
+                    return Response({"success": True, "payment_id": payment.id, "status": "pending"}, status=200)
+                return Response({"message": "A payment request is already awaiting recipient approval."}, status=409)
+            if not payment:
+                payment = SettlementPayment.objects.create(
+                    tour=tour,
+                    payer=request.user,
+                    recipient_id=recipient_id,
+                    amount=amount,
+                    payment_method="raast",
+                    status="pending",
+                    currency="pkr",
+                    sender_raast_id=sender_raast_id,
+                    recipient_raast_id=recipient_raast_id,
+                )
+            else:
+                payment.payment_method = "raast"
+                payment.status = "pending"
+                payment.currency = "pkr"
+                payment.paid_at = None
+                payment.approved_at = None
+                payment.sender_raast_id = sender_raast_id
+                payment.recipient_raast_id = recipient_raast_id
+                payment.save(update_fields=[
+                    "payment_method", "status", "currency", "paid_at", "approved_at",
+                    "sender_raast_id", "recipient_raast_id", "updated_at",
+                ])
+
+            Notification.objects.create(
+                user=payment.recipient,
+                payment=payment,
+                title="Raast transfer awaiting confirmation",
+                message=(
+                    f"{sender_name} reports sending Rs {payment.amount} via Raast. "
+                    f"Sender Raast ID: {sender_raast_id}. Receiver Raast ID: {recipient_raast_id}. "
+                    "Check your bank account before confirming receipt."
+                ),
+            )
+        return Response({"success": True, "payment_id": payment.id, "status": "pending"}, status=200)
+
+
+class RaastPaymentLinkAPIView(APIView):
+    """Return a QR for a PayTogether page that can resume this valid settlement."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            tour_id = int(request.data["tour_id"])
+            recipient_id = int(request.data["to_id"])
+        except (KeyError, TypeError, ValueError):
+            return Response({"message": "A valid tour and recipient are required."}, status=400)
+
+        tour = Tour.objects.filter(pk=tour_id).first()
+        if not tour or not (tour.created_by_id == request.user.id or tour.members.filter(user_id=request.user.id).exists()):
+            return Response({"message": "You cannot pay this settlement."}, status=404)
+        settlement = _current_settlement(tour, request.user.id, recipient_id)
+        if not settlement:
+            return Response({"message": "This is not a current settlement."}, status=400)
+
+        payment_url = request.build_absolute_uri(
+            f"/tours/{tour.id}/?pay_to={recipient_id}&method=raast"
+        )
+        qr = qrcode.QRCode(error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=8, border=4)
+        qr.add_data(payment_url)
+        qr.make(fit=True)
+        svg = qr.make_image(image_factory=SvgPathFillImage).to_string(encoding="unicode")
+        qr_data_uri = "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
+        return Response({"payment_url": payment_url, "qr_code": qr_data_uri}, status=200)
 
 
 @method_decorator(csrf_exempt, name="dispatch")

@@ -10,6 +10,7 @@ from rest_framework.test import APITestCase
 from apps.expeness.models import Expense
 from apps.reports.models import SettlementPayment
 from apps.tour.models import Tour, TourMember
+from apps.payments.providers import PaymentInitiation, RaastProvider
 
 
 @override_settings(STRIPE_SECRET_KEY="sk_test_123")
@@ -218,3 +219,112 @@ class StripePaymentTests(APITestCase):
         payment.refresh_from_db()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(payment.status, "pending")
+
+    def test_raast_provider_unconfigured_does_not_settle_obligation(self):
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            "/api/payments/raast/initiate/",
+            {"tour_id": self.tour.id, "to_id": self.owner.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(SettlementPayment.objects.filter(tour=self.tour, payer=self.member).exists())
+
+    @override_settings(RAAST_PROVIDER_CLASS="apps.payments.tests.FakeRaastProvider")
+    def test_raast_initiation_and_verified_status_confirmation(self):
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            "/api/payments/raast/initiate/",
+            {"tour_id": self.tour.id, "to_id": self.owner.id},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        payment = SettlementPayment.objects.get(pk=response.data["payment_id"])
+        self.assertEqual(payment.status, "processing")
+        self.assertEqual(payment.provider_reference, "mock-provider-ref")
+        self.assertIsNone(payment.paid_at)
+
+        FakeRaastProvider.next_status = "paid"
+        status_response = self.client.get(f"/api/payments/status/?payment_id={payment.id}")
+        payment.refresh_from_db()
+        self.assertEqual(status_response.status_code, 200)
+        self.assertEqual(payment.status, "paid")
+        self.assertIsNotNone(payment.paid_at)
+        FakeRaastProvider.next_status = "processing"
+
+    @override_settings(RAAST_PROVIDER_CLASS="apps.payments.tests.FakeRaastProvider")
+    def test_raast_failed_cancelled_and_expired_payments_can_be_retried(self):
+        self.client.force_authenticate(user=self.member)
+        initiation_url = "/api/payments/raast/initiate/"
+        payload = {"tour_id": self.tour.id, "to_id": self.owner.id}
+        for terminal_status in ("failed", "cancelled", "expired"):
+            started = self.client.post(initiation_url, payload, format="json")
+            self.assertEqual(started.status_code, 200)
+            payment_id = started.data["payment_id"]
+            FakeRaastProvider.next_status = terminal_status
+            checked = self.client.get(f"/api/payments/status/?payment_id={payment_id}")
+            self.assertEqual(checked.data["status"], terminal_status)
+            FakeRaastProvider.next_status = "processing"
+
+        retried = self.client.post(initiation_url, payload, format="json")
+        payment = SettlementPayment.objects.get(pk=retried.data["payment_id"])
+        self.assertEqual(retried.status_code, 200)
+        self.assertEqual(payment.status, "processing")
+        self.assertEqual(SettlementPayment.objects.filter(tour=self.tour, payer=self.member).count(), 1)
+
+    @override_settings(RAAST_PROVIDER_CLASS="apps.payments.tests.FakeRaastProvider")
+    def test_duplicate_status_verification_is_idempotent(self):
+        self.client.force_authenticate(user=self.member)
+        started = self.client.post(
+            "/api/payments/raast/initiate/",
+            {"tour_id": self.tour.id, "to_id": self.owner.id},
+            format="json",
+        )
+        FakeRaastProvider.next_status = "paid"
+        endpoint = f"/api/payments/status/?payment_id={started.data['payment_id']}"
+        first = self.client.get(endpoint)
+        paid_at = SettlementPayment.objects.get(pk=started.data["payment_id"]).paid_at
+        second = self.client.get(endpoint)
+        payment = SettlementPayment.objects.get(pk=started.data["payment_id"])
+        self.assertEqual(first.data["status"], "paid")
+        self.assertEqual(second.data["status"], "paid")
+        self.assertEqual(payment.paid_at, paid_at)
+        FakeRaastProvider.next_status = "processing"
+
+    @override_settings(RAAST_PROVIDER_CLASS="apps.payments.tests.FakeRaastProvider")
+    def test_raast_provider_timeout_leaves_payment_unpaid_and_retryable(self):
+        FakeRaastProvider.fail_initiation = True
+        self.client.force_authenticate(user=self.member)
+        response = self.client.post(
+            "/api/payments/raast/initiate/",
+            {"tour_id": self.tour.id, "to_id": self.owner.id},
+            format="json",
+        )
+        FakeRaastProvider.fail_initiation = False
+        self.assertEqual(response.status_code, 502)
+        payment = SettlementPayment.objects.get(tour=self.tour, payer=self.member)
+        self.assertEqual(payment.status, "pending")
+        self.assertIsNone(payment.paid_at)
+
+    def test_invalid_payment_state_transition_is_rejected(self):
+        from apps.payments.services import transition_provider_payment
+
+        payment = SettlementPayment.objects.create(
+            tour=self.tour, payer=self.member, recipient=self.owner,
+            amount="50.00", payment_method="raast", status="pending", currency="pkr",
+        )
+        with self.assertRaises(ValueError):
+            transition_provider_payment(payment, "unpaid")
+
+
+class FakeRaastProvider(RaastProvider):
+    next_status = "processing"
+    fail_initiation = False
+
+    def initiate(self, payment):
+        if type(self).fail_initiation:
+            raise TimeoutError("simulated timeout")
+        return PaymentInitiation(reference="mock-provider-ref")
+
+    def verify(self, payment):
+        return type(self).next_status

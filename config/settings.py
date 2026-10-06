@@ -93,6 +93,10 @@ STRIPE_PUBLISHABLE_KEY = config(
 )
 STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
 STRIPE_CURRENCY = config("STRIPE_CURRENCY", default="usd").lower()
+RAAST_PROVIDER_CLASS = config(
+    "RAAST_PROVIDER_CLASS",
+    default="apps.payments.providers.UnconfiguredRaastProvider",
+)
 
 
 # Application definition

@@ -173,10 +173,10 @@ class SettlementPaymentAPIView(APIView):
 
         payment_method = request.data.get("payment_method")
         if payment_method not in dict(SettlementPayment.PAYMENT_METHOD_CHOICES):
-            return Response({"detail": "Payment method must be cod or card."}, status=status.HTTP_400_BAD_REQUEST)
-        if payment_method == "card":
+            return Response({"detail": "Choose cash, bank card, or Raast."}, status=status.HTTP_400_BAD_REQUEST)
+        if payment_method in {"card", "raast"}:
             return Response(
-                {"detail": "Bank card payments must use Stripe Checkout."},
+                {"detail": "Electronic payments must use their provider checkout."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

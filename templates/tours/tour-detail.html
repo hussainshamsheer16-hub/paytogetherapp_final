@@ -640,26 +640,59 @@ Tour Details
                 </div>
                 <button type="button" id="closeSettlementPaymentModalBtn" class="text-2xl leading-none text-gray-400 hover:text-gray-600">&times;</button>
             </div>
-            <form id="settlementPaymentForm" class="space-y-4">
-                <input type="hidden" id="settlementPaymentToId">
-                <input type="hidden" id="settlementPaymentAmount">
-                <div class="rounded-lg border border-brand-100 bg-brand-50 px-4 py-3">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-brand-700">Amount to pay</p>
-                    <p id="settlementPaymentAmountLabel" class="mt-1 text-xl font-bold text-brand-900">Rs 0.00</p>
+            <input type="hidden" id="settlementPaymentToId">
+            <input type="hidden" id="settlementPaymentAmount">
+            <div class="mb-4 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-brand-700">Amount to pay</p>
+                <p id="settlementPaymentAmountLabel" class="mt-1 text-xl font-bold text-brand-900">Rs 0.00</p>
+            </div>
+            <div class="mb-4 rounded-lg border border-gray-200 px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Paying to</p>
+                <p id="settlementRecipientName" class="mt-1 font-bold text-gray-900"></p>
+                <p class="mt-1 text-xs text-gray-500">PayTogether ID: <span id="settlementRecipientId"></span></p>
+            </div>
+            <div id="paymentMethodChoices" class="space-y-3">
+                <p class="mb-3 text-sm font-semibold text-gray-700">Choose how you want to pay</p>
+                <button type="button" data-payment-method="cod" class="payment-method-choice flex w-full items-center gap-4 rounded-xl border border-gray-200 p-4 text-left hover:border-brand-500 hover:bg-brand-50">
+                    <span class="text-3xl" aria-hidden="true">💵</span><span><span class="block font-bold text-gray-900">Cash</span><span class="text-sm text-gray-500">Recipient confirms when received</span></span>
+                </button>
+                <button type="button" data-payment-method="raast" class="payment-method-choice flex w-full items-center gap-4 rounded-xl border border-gray-200 p-4 text-left hover:border-brand-500 hover:bg-brand-50">
+                    <span class="text-3xl" aria-hidden="true">🏦</span><span><span class="block font-bold text-gray-900">Pay with Raast</span><span class="text-sm text-gray-500">Continue through a participating bank or PSP</span></span>
+                </button>
+                <button type="button" data-payment-method="card" class="payment-method-choice flex w-full items-center gap-4 rounded-xl border border-gray-200 p-4 text-left hover:border-brand-500 hover:bg-brand-50">
+                    <span class="text-3xl" aria-hidden="true">💳</span><span><span class="block font-bold text-gray-900">Card</span><span class="text-sm text-gray-500">Secure card checkout by Stripe</span></span>
+                </button>
+            </div>
+            <div id="paymentMethodStep" class="hidden space-y-4" aria-live="polite">
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4">
+                    <p id="paymentMethodStepTitle" class="font-bold text-gray-900"></p>
+                    <p id="paymentMethodStepText" class="mt-2 text-sm text-gray-600"></p>
                 </div>
-                <div>
-                    <label for="settlementPaymentMethod" class="mb-1.5 block text-sm font-semibold text-gray-700">Payment method</label>
-                    <select id="settlementPaymentMethod" class="w-full rounded-lg border border-gray-300 px-3 py-2.5" required>
-                        <option value="cod">Cash</option>
-                        <option value="card">Pay with bank card</option>
-                    </select>
+                <div id="raastIdFields" class="hidden space-y-3">
+                    <div>
+                        <label for="senderRaastId" class="mb-1 block text-sm font-semibold text-gray-700">Sender Raast ID</label>
+                        <input id="senderRaastId" type="text" maxlength="255" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2.5" placeholder="Enter your Raast ID">
+                    </div>
+                    <div>
+                        <label for="recipientRaastId" class="mb-1 block text-sm font-semibold text-gray-700">Receiver Raast ID</label>
+                        <input id="recipientRaastId" type="text" maxlength="255" autocomplete="off" class="w-full rounded-lg border border-gray-300 px-3 py-2.5" placeholder="Enter receiver's Raast ID">
+                    </div>
+                    <p class="text-xs text-amber-800">Submitting reports that you sent the transfer. The receiver must check their bank account and approve it before this settlement is marked paid.</p>
                 </div>
-                <p id="settlementPaymentMethodHint" class="text-sm text-slate-500">The recipient will approve this cash payment.</p>
-                <div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                    <button type="button" id="cancelSettlementPaymentBtn" class="rounded-lg border border-gray-300 px-5 py-2.5 text-gray-700 hover:bg-gray-100">Cancel</button>
-                    <button type="submit" id="confirmSettlementPaymentBtn" class="rounded-lg bg-brand-600 px-5 py-2.5 font-semibold text-white hover:bg-brand-700">Confirm cash payment</button>
+                <div id="raastQrPanel" class="hidden rounded-lg border border-gray-200 p-4 text-center">
+                    <p class="text-sm font-semibold text-gray-800">PayTogether payment link</p>
+                    <img id="raastPaymentQr" class="mx-auto mt-3 h-44 w-44" alt="QR code linking to this PayTogether settlement">
+                    <p class="mt-2 break-all text-xs text-gray-500" id="raastPaymentLinkText"></p>
+                    <p class="mt-2 text-xs text-gray-500">Scanning opens PayTogether. This QR does not send money through a bank app.</p>
+                    <p class="mt-1 text-xs text-gray-500">The QR uses this site's address. On another device, the site must be reachable from that device.</p>
                 </div>
-            </form>
+                <p id="paymentMethodStepError" class="hidden rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700"></p>
+                <p class="text-xs text-gray-500">Never enter a PIN, OTP, password, or card number in PayTogether.</p>
+                <div class="flex justify-between gap-3 pt-2">
+                    <button type="button" id="backToPaymentMethodsBtn" class="rounded-lg border border-gray-300 px-4 py-2.5 text-gray-700 hover:bg-gray-100">Back to methods</button>
+                    <button type="button" id="continuePaymentMethodBtn" class="rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700">Continue</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -670,6 +703,6 @@ Tour Details
 
 {% block scripts %}
 
-<script src="{% static 'js/tour-detail.js' %}?v=3"></script>
+<script src="{% static 'js/tour-detail.js' %}?v=7"></script>
 
 {% endblock %}

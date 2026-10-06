@@ -7,6 +7,7 @@ class SettlementPayment(models.Model):
 	PAYMENT_METHOD_CHOICES = [
 		("cod", "Cash on delivery"),
 		("card", "Bank card"),
+		("raast", "Raast"),
 	]
 	STATUS_CHOICES = [
 		("unpaid", "Unpaid"),
@@ -16,6 +17,8 @@ class SettlementPayment(models.Model):
 		("not_received", "Not received"),
 		("failed", "Failed"),
 		("cancelled", "Cancelled"),
+		("processing", "Processing"),
+		("expired", "Expired"),
 	]
 
 	tour = models.ForeignKey(Tour, on_delete=models.CASCADE, related_name="settlement_payments")
@@ -33,12 +36,21 @@ class SettlementPayment(models.Model):
 	stripe_checkout_session_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 	stripe_payment_intent_id = models.CharField(max_length=255, blank=True)
 	transaction_reference = models.CharField(max_length=255, blank=True)
+	provider_reference = models.CharField(max_length=255, blank=True, db_index=True)
+	sender_raast_id = models.CharField(max_length=255, blank=True)
+	recipient_raast_id = models.CharField(max_length=255, blank=True)
 	currency = models.CharField(max_length=3, default="usd")
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
 	class Meta:
 		ordering = ["-created_at"]
+		constraints = [
+			models.UniqueConstraint(
+				fields=["tour", "payer", "recipient", "amount"],
+				name="unique_tour_settlement_payment",
+			)
+		]
 
 	def __str__(self):
 		return f"{self.payer} pays {self.recipient} - {self.amount} ({self.status})"

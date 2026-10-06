@@ -137,3 +137,17 @@ Use Stripe test keys and test card `4242 4242 4242 4242` with any future expiry 
 ```
 
 The tests mock Stripe API calls and cover ownership, amount tampering, already-paid records, invalid signatures, valid idempotent webhooks, and failed/cancelled payments.
+
+## Raast provider integration
+
+The settlement record supports the `raast` method and provider lifecycle states, but this repository does not contain a bank/PSP integration. SBP describes Raast P2M as merchant payment acceptance enabled through a bank or payment provider; fintechs seeking direct access must contact SBP for onboarding and technical integration. PayTogether's payer-to-recipient obligation is not itself a merchant checkout, so a participating institution must confirm the eligible use case and settlement model before real payments are enabled.
+
+No public generic Raast API, credentials, test environment, authentication format, webhook format, or callback contract was supplied by SBP sources for this integration. The default adapter therefore returns unavailable and cannot mark payments paid. Add `RAAST_PROVIDER_CLASS` only after receiving the selected bank/PSP's approved technical specification and credentials. The adapter must implement `RaastProvider.initiate(payment)` and `RaastProvider.verify(payment)`; status changes are applied idempotently, and only a verified `paid` result settles an obligation. Provider references are stored for reconciliation. No Raast callback route is exposed until a provider defines its authenticated callback contract.
+
+The UI endpoint is `POST /api/payments/raast/initiate/`; authenticated users can check/refresh a payment with `GET /api/payments/status/?payment_id=...`. Run migration `apps.reports.0006_raast_payment_support` before deployment. `RAAST_PROVIDER_CLASS` defaults to `apps.payments.providers.UnconfiguredRaastProvider`; no Raast secrets are required until a real adapter is installed. Adapter-specific secret names and webhook configuration must follow that provider's documentation.
+
+The payment chooser also shows JazzCash and Easypaisa, but these are informational until merchant gateway integrations and credentials are configured. JazzCash provides an official merchant sandbox and hosted payment page; Easypaisa's merchant integration guides are available through its merchant portal. The app does not collect wallet PINs/OTPs or mark either method paid without a server-verified provider result. Card details are collected on Stripe Checkout and the existing signed Stripe webhook confirms settlement.
+
+PayTogether also supports a manual Raast transfer claim: the payer enters sender and receiver Raast IDs after making a transfer externally, and the receiver must verify their account and approve it. This manual flow is self-reported and is not bank/PSP verification. The payment remains pending until recipient approval. Apply migration `apps.reports.0007_settlementpayment_raast_ids` to store those two Raast IDs with the settlement record.
+
+The Raast form's QR code links to the PayTogether tour page for the same payer-to-recipient settlement. It is not a Raast bank QR and does not initiate a bank transfer by scanning. On a local development server, another device needs a reachable LAN/deployed host instead of `127.0.0.1` in order to open the link.
